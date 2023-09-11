@@ -1,0 +1,26 @@
+{
+  "name": "hls-transcode",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node built/index.js",
+    "build": "esbuild index.js --platform=node --bundle --minify --outfile=built/index.js && pkg built/index.js --output hls-transcode/bin/hls-transcode"
+  },
+  "bin": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "^0.19.2",
+    "pkg": "^5.8.1"
+  },
+  "dependencies": {
+    "cli-spinners": "^2.9.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "inquirer": "^9.2.11",
+    "nanospinner": "^1.1.0"
+  }
+}
