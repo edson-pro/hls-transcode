@@ -1,26 +1,54 @@
 {
   "name": "hls-transcode",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
+  "author": "Edson",
+  "description": " Hls transcoder",
+  "main": "electron/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node built/index.js",
-    "build": "esbuild index.js --platform=node --bundle --minify --outfile=built/index.js && pkg built/index.js --output hls-transcode/bin/hls-transcode"
+    "dev": "concurrently \"vite\" \"electron .\"",
+    "preview": "vite build && electron .",
+    "build": "vite build  && mkdir dist\\src & xcopy electron dist\\electron /E /I /H /Y && electron-builder build --win -c.extraMetadata.main=dist/electron/main.js --publish never"
   },
-  "bin": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
-    "esbuild": "^0.19.2",
-    "pkg": "^5.8.1"
+    "@sveltejs/vite-plugin-svelte": "^2.4.2",
+    "@tsconfig/svelte": "^5.0.0",
+    "@types/archiver": "^5.3.2",
+    "@types/fluent-ffmpeg": "^2.1.21",
+    "autoprefixer": "^10.4.15",
+    "concurrently": "^8.2.1",
+    "electron": "^26.2.0",
+    "electron-builder": "^23.6.0",
+    "path-browserify": "^1.0.1",
+    "postcss": "^8.4.29",
+    "svelte": "^4.0.5",
+    "svelte-check": "^3.4.6",
+    "tailwindcss": "^3.3.3",
+    "tslib": "^2.6.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5",
+    "vite-plugin-electron-renderer": "^0.14.5"
   },
   "dependencies": {
-    "cli-spinners": "^2.9.0",
-    "fluent-ffmpeg": "^2.1.2",
-    "inquirer": "^9.2.11",
-    "nanospinner": "^1.1.0"
+    "archiver": "^6.0.1",
+    "basic-ftp": "^5.0.3",
+    "ffmpeg-static": "^5.2.0",
+    "ffmpeg-static-electron": "^2.0.3",
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.2"
+  },
+  "build": {
+    "appId": "hls-transcode",
+    "productName": "Hls transcode",
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/bin/${os}/${arch}/ffmpeg",
+      "node_modules/ffmpeg-static/index.js",
+      "node_modules/ffmpeg-static/package.json"
+    ]
   }
 }

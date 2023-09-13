@@ -1,5 +1,5 @@
 window.addEventListener("DOMContentLoaded", () => {
-  const replaceText = (selector: any, text: any) => {
+  const replaceText = (selector, text) => {
     const element = document.getElementById(selector);
     if (element) element.innerText = text;
   };

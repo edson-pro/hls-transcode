@@ -25,10 +25,10 @@
     (_, progress) => (zippingProgress = progress)
   );
   ipcRenderer.on("upload-started", () => setStatus("uploading"));
-  ipcRenderer.on(
-    "upload-progress",
-    (_, progress) => (uploadProgress = progress)
-  );
+  ipcRenderer.on("upload-progress", (_, progress) => {
+    console.log(progress);
+    uploadProgress = Number(progress) || 0;
+  });
   ipcRenderer.on("upload-finished", (_, arg) => handleUploadFinished(arg));
 
   function setStatus(newStatus: typeof status) {
@@ -54,7 +54,7 @@
     file = currentFile;
     ipcRenderer.send("transcode", {
       file: file?.path,
-      resolution: "640x360",
+      resolution: "1280x720",
     });
   }
 
@@ -105,7 +105,7 @@
         on:click={() => fileInput.click()}
         class="flex items-center justify-center space-y-2 py-8 px-4 flex-col"
       >
-        <img class="h-14 w-14 mb-2" src={"/upload.png"} alt="" />
+        <img class="h-14 w-14 mb-2" src={"upload.png"} alt="" />
         <h4 class="text-center font-semibold mb-2 leading-7 text-[13.5px]">
           <span>Drag and drop your video here or</span>
           <a href="#" class="text-green-500">Choose a file</a>
@@ -122,7 +122,7 @@
     {/if}
     {#if !file && uploadedVideo}
       <div class="flex items-center flex-col gap-2 py-8 space-y-2">
-        <img src="/approved.png" class="h-10 w-10" alt="" />
+        <img src="approved.png" class="h-10 w-10" alt="" />
         <h4 class="text-[13.5px] font-semibold capitalize">
           Video Uploaded successfully
         </h4>
@@ -157,7 +157,7 @@
     {#if file}
       <div class="flex items-center gap-3">
         <div>
-          <img class="h-10 w-10" src={"/video.png"} alt="" />
+          <img class="h-10 w-10" src={"video.png"} alt="" />
         </div>
         <div class="flex w-full pr-4 py-4 flex-col gap-1">
           <div class="flex w-full items-center justify-between">

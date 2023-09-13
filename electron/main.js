@@ -1,20 +1,33 @@
 // src/electron/main/main.ts
-import { join } from "path";
-import { app, BrowserWindow, ipcMain } from "electron";
-import ffmpeg from "fluent-ffmpeg";
-import fs_promise from "fs/promises";
-import fs from "fs";
-import archiver from "archiver";
-import * as ftp from "basic-ftp";
-import path from "path";
+const path = require("path");
+const {app, BrowserWindow, ipcMain} = require("electron");
+const fs_promise = require("fs").promises;
+const fs = require("fs");
+const archiver = require("archiver");
+const ftp = require("basic-ftp");
+const {join} = require("path");
 
-const isDev = process.env.npm_lifecycle_event === "app:dev" ? true : false;
+const ffmpeg = require('fluent-ffmpeg');
+
+//Get the paths to the packaged versions of the binaries we want to use
+// @ts-ignore
+const ffmpegPath = require('ffmpeg-static').replace(
+  'app.asar',
+  'app.asar.unpacked'
+);
+const ffprobePath = require('ffprobe-static').path.replace(
+  'app.asar',
+  'app.asar.unpacked'
+);
+
+const isDev = process.env.npm_lifecycle_event === "dev" ? true : false;
+const isPreview = process.env.npm_lifecycle_event === "preview" ? true : false;
 
 const chunk_length = 60;
 
-function deleteAndCreateFolder(folderPath: any) {
+function deleteAndCreateFolder(folderPath) {
   return fs_promise
-    .rm(folderPath, { recursive: true })
+    .rm(folderPath, {recursive: true})
     .catch((err) => {
       if (err.code === "ENOENT") {
         // console.log(`Folder does not exist: ${folderPath}`);
@@ -34,8 +47,11 @@ function deleteAndCreateFolder(folderPath: any) {
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 700,
+    height: 370,
+    maximizable: false,
+    resizable: false,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, "./preload.js"),
       nodeIntegration: true,
@@ -47,7 +63,7 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools(); // Open the DevTools.
   } else {
-    mainWindow.loadFile(join(__dirname, "../../dist/index.html"));
+    mainWindow.loadFile(path.join(__dirname, isPreview ? '../dist/index.html' : "../index.html"));
   }
 }
 app.whenReady().then(() => {
@@ -64,12 +80,12 @@ app.on("window-all-closed", () => {
 });
 
 ipcMain.on("transcode", async (event, arg) => {
-  const { fileName, resolution } = {
+  const {fileName, resolution} = {
     fileName: arg.file,
     resolution: arg.resolution,
   };
 
-  let totalTime: any;
+  let totalTime;
   const OutputFolder = fileName.split(".")[0];
 
   event.sender.send("preparing-space");
@@ -78,13 +94,15 @@ ipcMain.on("transcode", async (event, arg) => {
   });
 
   const command = ffmpeg()
+    .setFfmpegPath(ffmpegPath)
+    .setFfprobePath(ffprobePath)
     .input(fileName)
     .size(resolution)
     .outputOptions("-c:v h264")
     .outputOptions(`-hls_time ${chunk_length}`)
     .outputOptions("-hls_segment_type mpegts")
     .outputOptions("-hls_list_size 0")
-    .output(`${OutputFolder}/output.m3u8`);
+    .output(`${OutputFolder}/output.m3u8`)
 
   command.on("start", function (commandLine) {
     console.log("Transcoding...");
@@ -94,7 +112,7 @@ ipcMain.on("transcode", async (event, arg) => {
   command.on("end", async function (commandLine) {
     console.log("Finished Transconding");
     event.sender.send("transcode-finished");
-    await handleZip({ event, OutputFolder });
+    await handleZip({event, OutputFolder});
   });
 
   command.on("codecData", (data) => {
@@ -110,7 +128,7 @@ ipcMain.on("transcode", async (event, arg) => {
   command.run();
 });
 
-const handleZip = ({ event, OutputFolder }: any) => {
+const handleZip = ({event, OutputFolder}) => {
   const outputZipFilePath = `${OutputFolder}.zip`;
 
   // Create a write stream for the output zip file
@@ -118,12 +136,12 @@ const handleZip = ({ event, OutputFolder }: any) => {
 
   // Create an archiver instance
   const archive = archiver("zip", {
-    zlib: { level: 9 }, // Compression level (0-9)
+    zlib: {level: 9}, // Compression level (0-9)
   });
 
   event.sender.send("zipping-started");
 
-  archive.on("progress", (progressData: any) => {
+  archive.on("progress", (progressData) => {
     event.sender.send(
       "zipping-progress",
       (progressData.fs.processedBytes / progressData.fs.totalBytes) * 100
@@ -132,13 +150,13 @@ const handleZip = ({ event, OutputFolder }: any) => {
 
   archive.on("end", async () => {
     console.log("Finished zipping");
-    handleUpload({ event, ZipFile: outputZipFilePath });
+    handleUpload({event, ZipFile: outputZipFilePath});
     event.sender.send("zipping-finished");
     // delete the folder
-    await fs.rmdirSync(OutputFolder, { recursive: true });
+    await fs.rmdirSync(OutputFolder, {recursive: true});
   });
 
-  archive.on("error", (err: any) => {
+  archive.on("error", (err) => {
     console.log("Error zipping files");
     event.sender.send("zipping-error", "Error zipping files");
   });
@@ -148,27 +166,35 @@ const handleZip = ({ event, OutputFolder }: any) => {
   archive.finalize();
 };
 
-const handleUpload = async ({ event, ZipFile }: any) => {
+const handleUpload = async ({event, ZipFile}) => {
   event.sender.send("upload-started");
   console.log("Uploading...");
 
   const client = new ftp.Client();
 
+  const HOST = "st35612.ispot.cc";
+  const USER = "st35612";
+  const PASSWORD = "uF%!vPT5";
+
   try {
-    const HOST = "st35612.ispot.cc";
     await client.access({
       host: HOST,
-      user: "st35612",
-      password: "uF%!vPT5",
+      user: USER,
+      password: PASSWORD,
     });
-
     // Change to the remote directory where you want to upload files
     await client.cd("/public_html/movies");
 
+    const localFileSize = fs.statSync(ZipFile).size;
+
+    let bytesUploaded = 0;
+
     client.trackProgress((info) => {
-      const percent = (info.bytes / info.bytesOverall) * 100;
-      console.log(info.bytes / info.bytesOverall);
-      event.sender.send("upload-progress", percent);
+      bytesUploaded = info.bytes;
+      const percentComplete = ((bytesUploaded / localFileSize) * 100).toFixed(
+        2
+      );
+      event.sender.send("upload-progress", percentComplete);
     });
 
     // Upload a file to the remote server
