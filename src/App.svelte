@@ -3,7 +3,7 @@
   import { ipcRenderer, shell } from "electron";
 
   let file: File | undefined;
-  let uploadedVideo = "";
+  let outputFilePath = "";
   let transcodeProgress = 0;
   let zippingProgress = 0;
   let uploadProgress = 0;
@@ -24,20 +24,19 @@
     "zipping-progress",
     (_, progress) => (zippingProgress = progress)
   );
-  ipcRenderer.on("upload-started", () => setStatus("uploading"));
-  ipcRenderer.on("upload-progress", (_, progress) => {
-    console.log(progress);
-    uploadProgress = Number(progress) || 0;
+  ipcRenderer.on("zipping-finished", (_, output) => {
+    file = undefined;
+    outputFilePath = output;
   });
-  ipcRenderer.on("upload-finished", (_, arg) => handleUploadFinished(arg));
+  // ipcRenderer.on("upload-started", () => setStatus("uploading"));
+  // ipcRenderer.on("upload-progress", (_, progress) => {
+  //   console.log(progress);
+  //   uploadProgress = Number(progress) || 0;
+  // });
+  // ipcRenderer.on("upload-finished", (_, arg) => handleUploadFinished(arg));
 
   function setStatus(newStatus: typeof status) {
     status = newStatus;
-  }
-
-  function handleUploadFinished(arg: typeof uploadedVideo) {
-    uploadedVideo = arg;
-    file = undefined;
   }
 
   function handleChange(e: any) {
@@ -98,7 +97,7 @@
   <div
     class="max-w-xl cursor-pointer mx-auto px-3 my-14 border bg-white border-slate-300 border-dashed rounded-[4px]"
   >
-    {#if !file && !uploadedVideo}
+    {#if !file && !outputFilePath}
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <div
@@ -120,7 +119,7 @@
         {/if}
       </div>
     {/if}
-    {#if !file && uploadedVideo}
+    {#if !file && outputFilePath}
       <div class="flex items-center flex-col gap-2 py-8 space-y-2">
         <img src="approved.png" class="h-10 w-10" alt="" />
         <h4 class="text-[13.5px] font-semibold capitalize">
@@ -131,18 +130,18 @@
         <!-- svelte-ignore a11y-missing-attribute -->
         <a
           on:click={() => {
-            shell.openExternal(uploadedVideo);
+            shell.showItemInFolder(outputFilePath);
           }}
           class="text-[13px] truncate font-medium border bg-slate-100 text-slate-500 rounded-sm border-slate-200 px-3 py-1"
         >
-          {elipsify(uploadedVideo, 50)}
+          {elipsify(outputFilePath, 50)}
         </a>
         <!-- svelte-ignore a11y-no-static-element-interactions -->
         <!-- svelte-ignore a11y-missing-attribute -->
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <a
           on:click={() => {
-            uploadedVideo = "";
+            outputFilePath = "";
             transcodeProgress = 0;
             zippingProgress = 0;
             uploadProgress = 0;
@@ -162,7 +161,7 @@
         <div class="flex w-full pr-4 py-4 flex-col gap-1">
           <div class="flex w-full items-center justify-between">
             <h4 class="text-[13px] capitalize font-semibold">
-              {file.name} -
+              {elipsify(file.name, 50)} -
               <span class="text-[13px] text-slate-500"
                 >{sizeConverter(file.size)}</span
               >

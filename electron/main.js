@@ -23,7 +23,7 @@ const ffprobePath = require('ffprobe-static').path.replace(
 const isDev = process.env.npm_lifecycle_event === "dev" ? true : false;
 const isPreview = process.env.npm_lifecycle_event === "preview" ? true : false;
 
-const chunk_length = 60;
+const chunk_length = 15;
 
 function deleteAndCreateFolder(folderPath) {
   return fs_promise
@@ -150,9 +150,7 @@ const handleZip = ({event, OutputFolder}) => {
 
   archive.on("end", async () => {
     console.log("Finished zipping");
-    handleUpload({event, ZipFile: outputZipFilePath});
-    event.sender.send("zipping-finished");
-    // delete the folder
+    event.sender.send("zipping-finished", outputZipFilePath);
     await fs.rmdirSync(OutputFolder, {recursive: true});
   });
 
@@ -166,52 +164,52 @@ const handleZip = ({event, OutputFolder}) => {
   archive.finalize();
 };
 
-const handleUpload = async ({event, ZipFile}) => {
-  event.sender.send("upload-started");
-  console.log("Uploading...");
+// const handleUpload = async ({event, ZipFile}) => {
+//   event.sender.send("upload-started");
+//   console.log("Uploading...");
 
-  const client = new ftp.Client();
+//   const client = new ftp.Client();
 
-  const HOST = "st35612.ispot.cc";
-  const USER = "st35612";
-  const PASSWORD = "uF%!vPT5";
+//   const HOST = "st35612.ispot.cc";
+//   const USER = "st35612";
+//   const PASSWORD = "uF%!vPT5";
 
-  try {
-    await client.access({
-      host: HOST,
-      user: USER,
-      password: PASSWORD,
-    });
-    // Change to the remote directory where you want to upload files
-    await client.cd("/public_html/movies");
+//   try {
+//     await client.access({
+//       host: HOST,
+//       user: USER,
+//       password: PASSWORD,
+//     });
+//     // Change to the remote directory where you want to upload files
+//     await client.cd("/public_html/movies");
 
-    const localFileSize = fs.statSync(ZipFile).size;
+//     const localFileSize = fs.statSync(ZipFile).size;
 
-    let bytesUploaded = 0;
+//     let bytesUploaded = 0;
 
-    client.trackProgress((info) => {
-      bytesUploaded = info.bytes;
-      const percentComplete = ((bytesUploaded / localFileSize) * 100).toFixed(
-        2
-      );
-      event.sender.send("upload-progress", percentComplete);
-    });
+//     client.trackProgress((info) => {
+//       bytesUploaded = info.bytes;
+//       const percentComplete = ((bytesUploaded / localFileSize) * 100).toFixed(
+//         2
+//       );
+//       event.sender.send("upload-progress", percentComplete);
+//     });
 
-    // Upload a file to the remote server
-    await client.uploadFrom(ZipFile, path.basename(ZipFile));
+//     // Upload a file to the remote server
+//     await client.uploadFrom(ZipFile, path.basename(ZipFile));
 
-    console.log("File uploaded successfully");
-    //  delete the zip file
-    await fs.unlinkSync(ZipFile);
-    event.sender.send(
-      "upload-finished",
-      `https://${HOST}:2222/CMD_FILE_MANAGER?path=/domains/${HOST}/public_html/movies`
-    );
-  } catch (err) {
-    event.sender.send("upload-error", "Upload failed");
-    console.error("FTP error:", err);
-  } finally {
-    // Close the FTP connection
-    client.close();
-  }
-};
+//     console.log("File uploaded successfully");
+//     //  delete the zip file
+//     await fs.unlinkSync(ZipFile);
+//     event.sender.send(
+//       "upload-finished",
+//       `https://${HOST}:2222/CMD_FILE_MANAGER?path=/domains/${HOST}/public_html/movies`
+//     );
+//   } catch (err) {
+//     event.sender.send("upload-error", "Upload failed");
+//     console.error("FTP error:", err);
+//   } finally {
+//     // Close the FTP connection
+//     client.close();
+//   }
+// };
